@@ -3,6 +3,8 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const session = require("express-session");
+
+//Auth de Google
 require("./auth.js");
 
 //Inicializamos server
@@ -19,12 +21,14 @@ app.get("/", (req, res) => {
     res.send('<a href="/auth/google">Authenticate with google </a>')
 });
 
-//Ruta que renderiza el prompt de Google con las cuentas
+//Ruta que renderiza el prompt de Google con las cuentas (lanza el pop up)
+//Nos saca de nuestra aplicación, hay que facilitarle una puerta de regreso...
 app.get("/auth/google", passport.authenticate("google", { scope: ['email', 'profile'], prompt: "select_account" }));
 
+//Esta es la ruta de regreso
 //Esta ruta tiene dos funciones, la primera es en caso de fallo nos redirecciona a /auth/failure, y la segunda, en caso de éxito realiza la función siguiente.
 app.get("/google/callBack?",
-    //Función de fallo
+    //Función de fallo (middleware)
     passport.authenticate('google', { failureRedirect: '/auth/failure' }),
     //Función exitosa
     (req, res) => {
@@ -41,6 +45,7 @@ app.get("/google/callBack?",
 
         console.log(token);
         //Almacenamos el token en las cookies
+        //Esta cookie es un header que se envía al navegador y este en las próximas peticiones que haga al servidor, la va a incluir
         res.cookie("access-token", token, {
             httpOnly: true,
             sameSite: "strict",
@@ -57,7 +62,7 @@ app.get('/auth/failure', (req, res) => {
     res.send('Something went wrong..')
 });
 
-//Definimos la ruta de logout, donde eliminamos la sesión y limpiamos el token de las cookies.
+//Definimos la ruta de logout, donde eliminamos la sesión que habíamos creada con express-session y limpiamos el token que habíamos guardado en las cookies.
 app.get('/logout', (req, res) => {
     req.logout(function (err) {
         if (err) { return next(err); }
